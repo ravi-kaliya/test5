@@ -1,38 +1,57 @@
+# Update to match your values: branch_name, app_name, SSH key name on GitHub from previous step if changed, server ip, username, port, and server Node pathname (using 'which pm2' on server to get path)
+
 name: Deploy Next.js App
 
 on:
   push:
     branches:
-      - master # Change this to your default branch if it's not main
+      - branch_name # Change to your specific branch
+      # - deployprod  # Additional branch for deployment
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-            node-version: '>=22'
+          node-version: "20"
 
-      - name: Install dependencies
-        run: npm install
+      - name: Check Node.js version
+        run: node -v
 
-      - name: Build the project
-        run: npm run build
-
-      - name: Deploy to Ubuntu Server
-        uses: appleboy/ssh-action@master
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.1
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /var/www/test5
-            git pull origin main
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to DigitalOcean
+        env:
+          HOST: 103.180.213.139 # Replace with your server IP address103.180.213.139            
+          USERNAME: root
+          TARGET_DIR: /var/www/test5 # Replace with your target directory on the server_name
+          APP_NAME: test5 #should match the name of the server block
+          PORT: 3005 # Replace with your desired port
+          #if multiple deploys are needed from different branches
+          #TARGET_DIR: ${{ github.ref == 'refs/heads/deploytest' && '/var/www/folder_name' || github.ref == 'refs/heads/deployprod' && '/var/www/another-location' }}
+          #APP_NAME: ${{ github.ref == 'refs/heads/deploytest' && 'folder_name' || github.ref == 'refs/heads/deployprod' && 'folder_name_2' }}
+          #PORT: ${{ github.ref == 'refs/heads/deploytest' && '3000' || github.ref == 'refs/heads/deployprod' && '3001' }}
+        run: |
+          ssh -o StrictHostKeyChecking=no $USERNAME@$HOST << EOF
+            export PATH=/root/.nvm/versions/node/v20.12.0/bin:$PATH #'which pm2' command on terminal will give the right path
+            cd $TARGET_DIR
+            git pull origin ${GITHUB_REF#refs/heads/}
             npm install
             npm run build
-            pm2 restart test5
+            if pm2 list | grep -q $APP_NAME; then
+              echo "Restarting application: $APP_NAME"
+              pm2 restart $APP_NAME
+            else
+              echo "Starting application: $APP_NAME"
+              pm2 start npm --name $APP_NAME -- start -- --port=$PORT
+            fi            
+            pm2 save
+          EOF
