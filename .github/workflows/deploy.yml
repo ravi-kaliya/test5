@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+            node-version: '>=22'
 
       - name: Install dependencies
         run: npm install
@@ -31,7 +31,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /var/www/nextjs-app
+            cd /var/www/test5
             git pull origin main
             npm install
             npm run build
