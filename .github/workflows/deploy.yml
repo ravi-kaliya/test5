@@ -35,7 +35,7 @@ jobs:
           PORT: 3005 # Replace with your desired port
         run: |
           ssh -o StrictHostKeyChecking=no $USERNAME@$HOST << EOF
-            export PATH=/root/.nvm/versions/node/v20.12.0/bin:$PATH # Update with the correct path
+            export PATH=/root/.nvm/versions/node/v22.14.0/bin:$PATH # Update with the correct path
             cd $TARGET_DIR
             git pull origin ${GITHUB_REF#refs/heads/}
             npm install
